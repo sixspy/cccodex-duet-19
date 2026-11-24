@@ -1,0 +1,14 @@
+name: duet
+services:
+  app:
+    build: ./backend
+    container_name: cc-duet-lab-duet-19
+    ports: ["8819:7800"]
+    volumes:
+      - duet_data:/data
+      - ./fixtures:/fixtures:ro
+    environment:
+      数据目录: /data
+      夹具目录: /fixtures
+volumes:
+  duet_data:
