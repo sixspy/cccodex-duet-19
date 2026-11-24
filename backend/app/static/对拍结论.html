@@ -27,37 +27,141 @@
     <main class="主">
 
       <section class="行卡">
-        <h1>对拍结论</h1>
-        <p class="说明">核对悬账与对齐差是否自洽。先跑对齐再跑结论。</p>
+        <h1>对拍结论 · 三联贯验</h1>
+        <p class="说明">结论徽章与对齐差/悬账单/旁路账册三表同票：三联形态旁路账册行参与撕裂计数；双联附件形态旁路不进撕裂计数、落快照表附件可回读。有悬两边均撕裂，纯对齐不撕裂。</p>
+        <div class="标签行" id="策略卡"></div>
         <div class="工具条">
-          <button id="跑">跑结论</button>
-          <button class="次" id="刷">刷新历史</button>
+          <select id="形态">
+            <option value="三联">三联（差+悬+旁路账册）</option>
+            <option value="双联附件">双联附件（差+悬，旁路进快照）</option>
+          </select>
+          <button id="跑贯验">跑贯验结论</button>
+          <button class="次" id="刷">刷新</button>
         </div>
+        <div id="贯验水位"></div>
         <pre class="报" id="报"></pre>
       </section>
-      <section class="行卡"><div id="表"></div></section>
+
+      <section class="行卡">
+        <h2>贯验结论历史</h2>
+        <div id="贯验表"></div>
+        <pre class="报" id="快照报"></pre>
+      </section>
+
+      <section class="行卡">
+        <h2>三表同票区（对齐差 / 悬账单 / 旁路账册）</h2>
+        <div class="工具条">
+          <input id="升编号" placeholder="对齐差编号" style="width:110px"/>
+          <button class="次" id="升格">旁路升格</button>
+          <span class="说明">把一条非对齐差行移入旁路账册；与贯验跑同锁，计数不漂。</span>
+        </div>
+        <div class="双栏">
+          <div><h3>对齐差（非对齐行）</h3><div id="差表"></div></div>
+          <div><h3>悬账单</h3><div id="悬表"></div></div>
+        </div>
+        <h3>旁路账册</h3>
+        <div id="旁表"></div>
+      </section>
+
+      <section class="行卡">
+        <h2>基线结论（悬账与对齐差自洽核验）</h2>
+        <div class="工具条">
+          <button class="次" id="跑基线">跑基线结论</button>
+        </div>
+        <pre class="报" id="基线报"></pre>
+        <div id="基线表"></div>
+      </section>
 
     </main>
   </div>
   <script src="/common.js"></script>
   <script>
-(async () => {
-  const paint = async () => {
-    const rows = await get("/api/对拍结论");
-    document.getElementById("表").innerHTML = 表(
-      ["编号","时刻","左","右","对齐","悬账","通过","说明"],
-      rows,
-      r => `<td>${r.编号}</td><td>${r.时刻}</td><td>${r.左笔数}</td><td>${r.右笔数}</td>
-        <td>${r.对齐笔数}</td><td>${r.悬账笔数}</td><td>${徽(r.是否通过)}</td><td>${r.说明}</td>`
-    );
-  };
-  await paint();
-  document.getElementById("跑").onclick = async () => {
-    document.getElementById("报").textContent = JSON.stringify(await post("/api/对拍结论/跑"), null, 2);
-    await paint();
-  };
-  document.getElementById("刷").onclick = paint;
-})();
-</script>
+const 撕徽 = t => t ? '<span class="徽 红">撕裂</span>' : '<span class="徽 绿">同票</span>';
+const 效徽 = v => v ? '<span class="徽 绿">valid</span>' : '<span class="徽 红">invalid</span>';
+
+async function 画策略() {
+  const g = await get("/api/三联贯验");
+  document.getElementById("形态").value = g.形态 === "双联附件" ? "双联附件" : "三联";
+  document.getElementById("策略卡").innerHTML = [
+    `<span class="标签">当前形态：${g.形态}</span>`,
+    `<span class="标签">撕裂标记：${撕徽(g.撕裂标记)}</span>`,
+    `<span class="标签">valid：${效徽(g.valid)}</span>`,
+    `<span class="标签">${g.同票 ? "结论与三表同票" : "结论与三表未同票"}</span>`,
+    `<span class="标签">${g.说明}</span>`,
+  ].join("");
+  document.getElementById("贯验水位").innerHTML = 统计([
+    ["差数", g.差数], ["悬数", g.悬数], ["旁路账册数", g.旁路账册数],
+    ["撕裂标记", g.撕裂标记 ? "撕裂" : "不撕裂"], ["valid", g.valid ? "valid" : "invalid"],
+  ]);
+}
+
+async function 画贯验表() {
+  const rows = await get("/api/贯验结论");
+  document.getElementById("贯验表").innerHTML = 表(
+    ["编号","时刻","形态","差","悬","旁路","撕裂","valid","快照","说明"],
+    rows,
+    r => `<td>${r.编号}</td><td>${r.时刻}</td><td>${r.形态}</td><td>${r.差数}</td><td>${r.悬数}</td>
+      <td>${r.旁路账册数}</td><td>${撕徽(r.撕裂标记)}</td><td>${效徽(r.valid)}</td>
+      <td>${r.快照编号 ? `<a href="#" data-快照="${r.快照编号}">附件#${r.快照编号}</a>` : "-"}</td>
+      <td>${r.说明}</td>`
+  );
+  document.querySelectorAll("[data-快照]").forEach(a => a.onclick = async (e) => {
+    e.preventDefault();
+    const s = await get("/api/贯验快照/" + a.dataset.快照);
+    document.getElementById("快照报").textContent = "快照附件回读：\n" + JSON.stringify(s, null, 2);
+  });
+}
+
+async function 画三表() {
+  const [差, 悬, 旁] = await Promise.all([
+    get("/api/对齐差"), get("/api/悬账单"), get("/api/旁路账册"),
+  ]);
+  const 非对齐 = 差.filter(r => r.差型 !== "对齐").slice(0, 20);
+  document.getElementById("差表").innerHTML = 表(
+    ["编号","业务键","差型","左","右"], 非对齐,
+    r => `<td>${r.编号}</td><td>${r.业务键}</td><td>${徽(r.差型)}</td><td>${r.左金额分 ?? "-"}</td><td>${r.右金额分 ?? "-"}</td>`
+  );
+  document.getElementById("悬表").innerHTML = 表(
+    ["编号","业务键","悬边","金额分","原因"], 悬.slice(0, 20),
+    r => `<td>${r.编号}</td><td>${r.业务键}</td><td>${r.悬边}</td><td>${r.金额分}</td><td>${r.原因}</td>`
+  );
+  document.getElementById("旁表").innerHTML = 表(
+    ["编号","业务键","金额分","来源差编号","说明","时刻"], 旁,
+    r => `<td>${r.编号}</td><td>${r.业务键}</td><td>${r.金额分}</td><td>${r.来源差编号}</td><td>${r.说明}</td><td>${r.时刻}</td>`
+  );
+}
+
+async function 画基线() {
+  const rows = await get("/api/对拍结论");
+  document.getElementById("基线表").innerHTML = 表(
+    ["编号","时刻","左","右","对齐","悬账","通过","说明"],
+    rows,
+    r => `<td>${r.编号}</td><td>${r.时刻}</td><td>${r.左笔数}</td><td>${r.右笔数}</td>
+      <td>${r.对齐笔数}</td><td>${r.悬账笔数}</td><td>${徽(r.是否通过)}</td><td>${r.说明}</td>`
+  );
+}
+
+async function 全画() { await Promise.all([画策略(), 画贯验表(), 画三表(), 画基线()]); }
+
+document.getElementById("跑贯验").onclick = async () => {
+  const 形态 = document.getElementById("形态").value;
+  const r = await post("/api/对拍结论/贯验跑", {形态});
+  document.getElementById("报").textContent = JSON.stringify(r, null, 2);
+  await 全画();
+};
+document.getElementById("升格").onclick = async () => {
+  const 编号 = document.getElementById("升编号").value.trim();
+  if (!编号) return;
+  const r = await post("/api/旁路账册/升格", {编号: Number(编号)});
+  document.getElementById("报").textContent = JSON.stringify(r, null, 2);
+  await 全画();
+};
+document.getElementById("跑基线").onclick = async () => {
+  document.getElementById("基线报").textContent = JSON.stringify(await post("/api/对拍结论/跑"), null, 2);
+  await 画基线();
+};
+document.getElementById("刷").onclick = 全画;
+(async () => { await 全画(); })();
+  </script>
 </body>
 </html>

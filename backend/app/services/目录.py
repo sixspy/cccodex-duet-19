@@ -66,6 +66,8 @@ def 概览() -> dict:
         "对齐差数": conn.execute("SELECT COUNT(*) AS c FROM 对齐差").fetchone()["c"],
         "悬账数": conn.execute("SELECT COUNT(*) AS c FROM 悬账单").fetchone()["c"],
         "结论数": conn.execute("SELECT COUNT(*) AS c FROM 对拍结论").fetchone()["c"],
+        "旁路账册数": conn.execute("SELECT COUNT(*) AS c FROM 旁路账册").fetchone()["c"],
+        "贯验结论数": conn.execute("SELECT COUNT(*) AS c FROM 贯验结论").fetchone()["c"],
     }
     conn.close()
     return out

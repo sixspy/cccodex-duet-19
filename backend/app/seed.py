@@ -66,6 +66,33 @@ CREATE TABLE IF NOT EXISTS 装载批次 (
   时刻 TEXT NOT NULL,
   报告 TEXT NOT NULL DEFAULT '{}'
 );
+CREATE TABLE IF NOT EXISTS 旁路账册 (
+  编号 INTEGER PRIMARY KEY AUTOINCREMENT,
+  业务键 TEXT NOT NULL,
+  金额分 INTEGER NOT NULL DEFAULT 0,
+  来源差编号 INTEGER NOT NULL DEFAULT 0,
+  说明 TEXT NOT NULL DEFAULT '',
+  时刻 TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS 贯验结论 (
+  编号 INTEGER PRIMARY KEY AUTOINCREMENT,
+  时刻 TEXT NOT NULL,
+  形态 TEXT NOT NULL,
+  差数 INTEGER NOT NULL,
+  悬数 INTEGER NOT NULL,
+  旁路账册数 INTEGER NOT NULL,
+  撕裂标记 INTEGER NOT NULL,
+  valid INTEGER NOT NULL,
+  快照编号 INTEGER NOT NULL DEFAULT 0,
+  说明 TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS 贯验快照 (
+  编号 INTEGER PRIMARY KEY AUTOINCREMENT,
+  结论编号 INTEGER NOT NULL,
+  旁路账册数 INTEGER NOT NULL,
+  快照 TEXT NOT NULL DEFAULT '[]',
+  时刻 TEXT NOT NULL
+);
 """
 
 
@@ -82,6 +109,7 @@ def 初始化库() -> None:
             "对齐键": "业务键",
             "金额容差分": "0",
             "骨架": "左轨装载→右轨装载→同键对齐落差→单边悬账→对拍结论",
+            "贯验形态": "三联",
             "皮": "支付渠道回执 vs 核心记账",
             "去皮": "双源键对齐管道",
         }.items():
